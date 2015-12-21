@@ -10,6 +10,7 @@
 * File History:
 * NAME          DATE         COMMENTS
 * Alex M.       2013-10-09   born
+* Alex M.       2015-12-16   Adapted for AVR XMega
 * 
 *=================================================================================================*/
 
@@ -26,19 +27,21 @@
 
 #include <uart_config.h>
 
-//--------------------------------------------------------------------------------------------------
+//==================================================================================================
+// Preprocessor computations
+//==================================================================================================
+
+// Resolve Modes
 #if(UART_RX_MODE == 1)
     #define RXMODE_INTR
-    #error "Interrupt mode not supported yet"
 #elif(UART_RX_MODE == 2)
     #define RXMODE_DMA
 #else
     #define RXMODE_POLL
 #endif
 
-#if(UART_TRX_MODE == 1)
+#if(UART_TX_MODE == 1)
     #define TXMODE_INTR
-    #error "Interrupt mode not supported yet"
 #elif(UART_TX_MODE == 2)
     #define TXMODE_DMA
 #else
@@ -49,7 +52,46 @@
     #include "fifo.h"
 #endif
 
-//--------------------------------------------------------------------------------------------------
+#ifdef TXMODE_INTR
+    #if(TX_FLOW_CONTROL_EN == 1)
+        #define TX_FLOW_CTL
+        // Generate register defines:
+        // PORT_INT0LVL_LO_gc PORT_INT0LVL_MED_gc PORT_INT0LVL_HI_gc
+        // PORT_INT1LVL_LO_gc PORT_INT1LVL_MED_gc PORT_INT1LVL_HI_gc
+        // PORT_INT0LVL_gm PORT_INT1LVL_gm
+        // INT0MASK INT1MASK
+        // VPORT_INT0IF_bm VPORT_INT1IF_bm
+        #define TXFC_PIN_bm (1 << TX_FLOW_PIN)
+        #if(TX_FLOW_INTERRUPT_ID == 0)
+            #define TXFC_INTMASK    INT0MASK
+            #define TXFC_INTIF_bm   PORT_INT0IF_bm
+            #define TXFC_INTLVL_gm  PORT_INT0LVL_gm
+            #if(TX_FLOW_INTERRUPT_LEVEL == 1)
+                #define TXFC_INTLVL_gc  PORT_INT0LVL_LO_gc
+            #elif(TX_FLOW_INTERRUPT_LEVEL == 2)
+                #define TXFC_INTLVL_gc  PORT_INT0LVL_MED_gc
+            #else
+                #define TXFC_INTLVL_gc  PORT_INT0LVL_HI_gc
+            #endif
+        #else
+            #define TXFC_INTMASK    INT1MASK
+            #define TXFC_INTIF_bm   PORT_INT1IF_bm
+            #define TXFC_INTLVL_gm  PORT_INT1LVL_gm
+            #if(TX_FLOW_INTERRUPT_LEVEL == 1)
+                #define TXFC_INTLVL_gc  PORT_INT1LVL_LO_gc
+            #elif(TX_FLOW_INTERRUPT_LEVEL == 2)
+                #define TXFC_INTLVL_gc  PORT_INT1LVL_MED_gc
+            #else
+                #define TXFC_INTLVL_gc  PORT_INT1LVL_HI_gc
+            #endif
+        #endif
+    #endif
+#endif
+
+//==================================================================================================
+// Variable Declarations
+//==================================================================================================
+
 #ifdef RXMODE_INTR
     static uint8_t rxbuf[RX_BUF_SIZE] __attribute__ ((section (".noinit")));
     static FIFO_t RXFIFO;
@@ -73,7 +115,10 @@
     static uint8_t TX_wridx;
 #endif
 
-//--------------------------------------------------------------------------------------------------
+//==================================================================================================
+// Functions
+//==================================================================================================
+
 void uart_init(void){
     // Clear UART
     UART_DEV.CTRLA = 0;
@@ -152,11 +197,32 @@ void uart_init(void){
     #undef BAUD
     
     UART_DEV.CTRLC = USART_CHSIZE_8BIT_gc;
+    // Enable UART!
     UART_DEV.CTRLB |= USART_RXEN_bm | USART_TXEN_bm;
+    
+    // Set up TX flow control
+    #ifdef TX_FLOW_CTL
+        TX_FLOW_PORT.DIRCLR = TXFC_PIN_bm; // ensure pin is input
+        TX_FLOW_PORT.TXFC_INTMASK = 0x00;
+        TX_FLOW_PORT.INTFLAGS = TXFC_INTIF_bm; // Clear flag
+        
+        // Set INTLVL for port
+        TX_FLOW_PORT.INTCTRL &= ~TXFC_INTLVL_gm;
+        TX_FLOW_PORT.INTCTRL |= TXFC_INTLVL_gc;
+        
+        // Set pin interrupt attributes (index pin number off of pin 0 control)
+        (&(TX_FLOW_PORT.PIN0CTRL))[TX_FLOW_PIN] = PORT_ISC_LEVEL_gc;
+    #endif
 }
 
 //--------------------------------------------------------------------------------------------------
+///\todo Disable interrupts, clr fifo, etc. in interrupt mode
 void uart_uninit(void){
+    #ifdef TX_FLOW_CTL
+        TX_FLOW_PORT.TXFC_INTMASK = 0x00;
+        TX_FLOW_PORT.INTCTRL &= ~TXFC_INTLVL_gm;
+    #endif
+    
     UART_DEV.CTRLA = 0;
     UART_DEV.CTRLB = 0;
     
@@ -469,12 +535,39 @@ void uart_read(void *buf, size_t size){
 #ifdef TXMODE_INTR
     ISR(TX_ISR_VECTOR){
         uint8_t c;
-        if(fifo_read(&TXFIFO, &c, 1) == 0){
-            UART_DEV.DATA = c;
-        }else{
-            // disable tx interrupt
-            UART_DEV.CTRLA &= ~(USART_DREINTLVL_gm)
-        }
+        #ifdef TX_FLOW_CTL
+            if(TX_FLOW_PORT.IN & TXFC_PIN_bm){
+                // CTS is high, requesting TX stop.
+                
+                // disable tx interrupt
+                UART_DEV.CTRLA &= ~(USART_DREINTLVL_gm)
+                
+                // Enable pin interrupt when CTS = 0
+                TX_FLOW_PORT.TXFC_INTMASK = TXFC_PIN_bm;
+            }else{
+                if(fifo_read(&TXFIFO, &c, 1) == 0){
+                    UART_DEV.DATA = c;
+                }else{
+                    // disable tx interrupt
+                    UART_DEV.CTRLA &= ~(USART_DREINTLVL_gm)
+                }
+            }
+        #else
+            if(fifo_read(&TXFIFO, &c, 1) == 0){
+                UART_DEV.DATA = c;
+            }else{
+                // disable tx interrupt
+                UART_DEV.CTRLA &= ~(USART_DREINTLVL_gm)
+            }
+        #endif
+    }
+#endif
+
+#ifdef TX_FLOW_CTL
+    ISR(TX_FLOW_PIN_VECTOR){
+        TX_FLOW_PORT.TXFC_INTMASK = 0x00;
+        TX_FLOW_PORT.INTFLAGS = TXFC_INTIF_bm; // Clear flag
+        UART_DEV.CTRLA |= TX_ISR_INTLVL; // Enable TX interrupt
     }
 #endif
 
@@ -504,8 +597,21 @@ void uart_write(void *buf, size_t size){
                 fifo_write(&TXFIFO, u8buf, wrcount);
                 u8buf += wrcount;
                 size -= wrcount;
-                // Since TX is inactive and should be empty, the interrupt should occur immediately.
-                UART_DEV.CTRLA |= TX_ISR_INTLVL;
+                // Enable TX Channel
+                #ifdef TX_FLOW_CTL
+                    // If not transmitting already, enable TX Interrupt
+                    ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
+                        if((UART_DEV.TXFC_INTMASK & TXFC_PIN_bm) == 0) {
+                            // Pin interrupt isn't already enabled. Safe to enable TX interrupt
+                            UART_DEV.CTRLA |= TX_ISR_INTLVL;
+                        }
+                    }
+                    
+                #else
+                    // Enable TX interrupt.
+                    // If TX is idle, then the interrupt should occur immediately.
+                    UART_DEV.CTRLA |= TX_ISR_INTLVL;
+                #endif
             }
         }
     #endif

@@ -25,6 +25,25 @@
 #define TX_BUF_SIZE     64
 
 //==================================================================================================
+// TX Flow Control (Only supported if UART_TX_MODE == 1)
+//==================================================================================================
+#define TX_FLOW_CONTROL_EN  0
+#define TX_FLOW_PORT        PORTA
+#define TX_FLOW_PIN         0
+
+// Set interrupt level
+#define TX_FLOW_INTERRUPT_LEVEL 2
+//  1 = Low
+//  2 = Med
+//  3 = High
+
+// Set interrupt ID to use (0 or 1)
+#define TX_FLOW_INTERRUPT_ID    0
+
+// Interrupt vector for CTS pin's port
+#define TX_FLOW_PIN_VECTOR      PORTA_INT0_vect
+
+//==================================================================================================
 // Interrupt mode configuration (If UART_XX_MODE == 1)
 //==================================================================================================
 #define RX_ISR_VECTOR   USARTD0_RXC_vect
