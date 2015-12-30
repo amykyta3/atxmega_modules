@@ -25,7 +25,7 @@
 
 #include "uart_io.h"
 
-#include <uart_config.h>
+#include <uart_io_config.h>
 
 //==================================================================================================
 // Preprocessor computations
@@ -123,7 +123,6 @@ void uart_init(void){
     // Clear UART
     UART_DEV.CTRLA = 0;
     UART_DEV.CTRLB = 0;
-    UART_DEV.CTRLD = 0;
     
     #if defined(RXMODE_DMA) || defined(TXMODE_DMA)
         // Setup EDMA
@@ -216,7 +215,6 @@ void uart_init(void){
 }
 
 //--------------------------------------------------------------------------------------------------
-///\todo Disable interrupts, clr fifo, etc. in interrupt mode
 void uart_uninit(void){
     #ifdef TX_FLOW_CTL
         TX_FLOW_PORT.TXFC_INTMASK = 0x00;
@@ -540,7 +538,7 @@ void uart_read(void *buf, size_t size){
                 // CTS is high, requesting TX stop.
                 
                 // disable tx interrupt
-                UART_DEV.CTRLA &= ~(USART_DREINTLVL_gm)
+                UART_DEV.CTRLA &= ~(USART_DREINTLVL_gm);
                 
                 // Enable pin interrupt when CTS = 0
                 TX_FLOW_PORT.TXFC_INTMASK = TXFC_PIN_bm;
@@ -549,7 +547,7 @@ void uart_read(void *buf, size_t size){
                     UART_DEV.DATA = c;
                 }else{
                     // disable tx interrupt
-                    UART_DEV.CTRLA &= ~(USART_DREINTLVL_gm)
+                    UART_DEV.CTRLA &= ~(USART_DREINTLVL_gm);
                 }
             }
         #else
@@ -557,7 +555,7 @@ void uart_read(void *buf, size_t size){
                 UART_DEV.DATA = c;
             }else{
                 // disable tx interrupt
-                UART_DEV.CTRLA &= ~(USART_DREINTLVL_gm)
+                UART_DEV.CTRLA &= ~(USART_DREINTLVL_gm);
             }
         #endif
     }
@@ -601,7 +599,7 @@ void uart_write(void *buf, size_t size){
                 #ifdef TX_FLOW_CTL
                     // If not transmitting already, enable TX Interrupt
                     ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
-                        if((UART_DEV.TXFC_INTMASK & TXFC_PIN_bm) == 0) {
+                        if((TX_FLOW_PORT.TXFC_INTMASK & TXFC_PIN_bm) == 0) {
                             // Pin interrupt isn't already enabled. Safe to enable TX interrupt
                             UART_DEV.CTRLA |= TX_ISR_INTLVL;
                         }

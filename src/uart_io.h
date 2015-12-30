@@ -67,7 +67,7 @@ void uart_read(void *buf, size_t size);
 * \param data Pointer to the data to be transmitted
 * \param len number of bytes to send
 **/
-void uart_write(const uint8_t *data, size_t len);
+void uart_write(void *data, size_t len);
 
 /**
 * \brief Writes a character to the UART
