@@ -36,7 +36,6 @@ void sp_load_flash_buffer(uint16_t address, uint16_t data){
         : "r0", "r1", "r20", "r30", "r31"
     );
     
-    while(NVM.STATUS & NVM_NVMBUSY_bm);
 }
 
 
