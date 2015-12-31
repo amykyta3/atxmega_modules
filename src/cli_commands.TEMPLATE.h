@@ -18,11 +18,11 @@
 
 // Table of commands: {"command_word" , function_name }
 // Command words MUST be in alphabetical (ascii) order!! (A-Z then a-z) if using binary search
-#define CMDTABLE    {"args"  , cmdArgList  },\
-                    {"hi"    , cmdHello    }
+#define CMDTABLE    {"args"  , cmd_ArgList  },\
+                    {"hi"    , cmd_Hello    }
 
 // Custom command function prototypes:
-int cmdArgList(uint16_t argc, char *argv[]);
-int cmdHello(uint16_t argc, char *argv[]);
+int cmd_ArgList(uint8_t argc, char *argv[]);
+int cmd_Hello(uint8_t argc, char *argv[]);
 
 #endif

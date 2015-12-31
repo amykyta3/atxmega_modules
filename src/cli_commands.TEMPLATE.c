@@ -32,13 +32,13 @@ void cli_print_notfound(char *strcmd){
 // Custom Commands
 //==================================================================================================
 
-int cmdHello(uint16_t argc, char *argv[]){
+int cmd_Hello(uint8_t argc, char *argv[]){
     cli_puts("Hello World\r\n");
     return(0);
 }
 
 //--------------------------------------------------------------------------------------------------
-int cmdArgList(uint16_t argc, char *argv[]){
+int cmd_ArgList(uint8_t argc, char *argv[]){
     cli_puts("Argument List:\r\n");
     int i;
     for(i=0;i<argc;i++){

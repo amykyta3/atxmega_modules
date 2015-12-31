@@ -62,11 +62,11 @@ void cli_print_error(int error);
 #define CMDCOUNT    (sizeof(CommandTable)/sizeof(cmdentry_t))
 
 //--------------------------------------------------------------------------------------------------
-static uint16_t split_args(char *str, char *argv[]){
+static uint8_t split_args(char *str, char *argv[]){
     #if PARSE_QUOTED_ARGS
         enum states { SEEK, IN_WORD, IN_QUOTES } state;
         char c;
-        uint16_t count;
+        uint8_t count;
         
         count = 0;
         state = SEEK;
@@ -173,7 +173,7 @@ void cli_process_char(char inchar){
             
             // Split the string into argv table
             char *argv[CLI_MAX_ARGC];
-            uint16_t argc;
+            uint8_t argc;
             
             argc = split_args(strin, argv);
             
