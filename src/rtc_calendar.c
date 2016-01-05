@@ -4,11 +4,13 @@
 
 #include <avr/io.h>
 
-#include "rtc.h"
+#include "rtc_calendar.h"
 
 //------------------------------------------------------------------------------
 
 #define RTC_CLK_FREQ    1024
+#define RTC_PRESCALER_gc   RTC_PRESCALER_DIV16_gc
+#define RTC_OVFINTLVL RTC_OVFINTLVL_LO_gc
 
 #if(RTC_PRESCALER_gc == RTC_PRESCALER_DIV1_gc)
     #define RTC_PRESCALER   1
@@ -30,37 +32,21 @@
 
 #define RTC_CNT_FREQ    (RTC_CLK_FREQ/RTC_PRESCALER)
 
+//------------------------------------------------------------------------------
+static uint16_t Cal_year;
+static uint8_t  Cal_month;
+static uint8_t  Cal_day;
+static uint8_t  Cal_dayofweek;
+static uint8_t  Cal_hour;
+static uint8_t  Cal_minute;
 
-#if(RTC_CALENDAR_ENABLE)
-    #define RTC_OVFINTLVL RTC_OVFINTLVL_LO_gc
-#else
-    #define RTC_OVFINTLVL RTC_OVFINTLVL_OFF_gc
-#endif
+static uint8_t DST_observed;
+static uint8_t DST_on;
 
-#if(RTC_TIMER_ENABLE)
-    #define RTC_COMPINTLVL RTC_COMPINTLVL_MED_gc
-#else
-    #define RTC_COMPINTLVL RTC_COMPINTLVL_OFF_gc
-#endif
-
+static calendar_alarm_t *Alarm_first
 
 //------------------------------------------------------------------------------
-#if(RTC_CALENDAR_ENABLE)
-    static uint16_t Cal_year;
-    static uint8_t  Cal_month;
-    static uint8_t  Cal_day;
-    static uint8_t  Cal_dayofweek;
-    static uint8_t  Cal_hour;
-    static uint8_t  Cal_minute;
-
-    static uint8_t DST_observed;
-    static uint8_t DST_on;
-    
-    static calendar_alarm_t *Alarm_first
-#endif
-
-//------------------------------------------------------------------------------
-void rtc_init(void){
+void calendar_init(void){
     RTC.CTRL = RTC_PRESCALER_OFF_gc;
     CLK.RTCCTRL = CLK_RTCSRC_TOSC_gc | CLK_RTCEN_bm;
     
@@ -90,21 +76,15 @@ void rtc_init(void){
 }
 
 //------------------------------------------------------------------------------
-void rtc_uninit(void){
+void calendar_uninit(void){
     RTC.CTRL = RTC_PRESCALER_OFF_gc;
     RTC.INTTRL = RTC_COMPINTLVL_OFF_gc | RTC_OVFINTLVL_OFF_gc;
     CLK.RTCCTRL = 0x00;
 }
 
-//==============================================================================
-// Calendar Functions
-//==============================================================================
-#if(RTC_CALENDAR_ENABLE)
-
 /**
 * \brief Calculates and fills in the \c day_of_week member based on the date.
 * \param T #calendar_time_t object
-* \test Test this...
 **/
 static void calc_DOW(calendar_time_t *T){
 	const uint8_t t[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
@@ -227,11 +207,11 @@ static uint8_t days_in_current_month(){
     if(Cal_month == 2){
         // February. Check if leap year
         if((Cal_year % 4) == 0){
-            days++;
-        }else if((Cal_year % 100) == 0){
-            days++;
-        }else if((Cal_year % 400) == 0){
-            days++;
+            if((Cal_year % 100) != 0){
+                days++;
+            }else if((Cal_year % 400) == 0){
+                days++;
+            }
         }
     }
     return(days);
@@ -333,4 +313,3 @@ ISR(RTC_OVF_vect){
     check_alarms();
 }
 
-#endif // RTC_CALENDAR_ENABLE

@@ -1,24 +1,10 @@
 
-#ifndef RTC_H
-#define RTC_H
+#ifndef RTC_CALENDAR_H
+#define RTC_CALENDAR_H
 
 #include <stdint.h>
 
-/**
-* \brief Initialize the RTC
-* \note RTC clock source must already be configured and generating a 32.768 kHz clock.
-**/
-void rtc_init(void);
-
-/**
-* \brief Uninitialize the RTC
-**/
-void rtc_uninit(void);
-
 //==============================================================================
-// Calendar Functions
-//==============================================================================
-#if(RTC_CALENDAR_ENABLE)
 typedef struct{
     uint16_t year;      ///< Full year integer
     uint8_t month;      ///< Month (Jan=0, Feb=1, etc...)
@@ -40,6 +26,17 @@ typedef struct{
     void *callback_data;        ///< User call-back data
     calendar_alarm_t *next;     ///< Reserved for internal use
 }calendar_alarm_t;
+//==============================================================================
+/**
+* \brief Initialize the RTC
+* \note RTC clock source must already be configured and generating a 32.768 kHz clock.
+**/
+void calendar_init(void);
+
+/**
+* \brief Uninitialize the RTC
+**/
+void calendar_uninit(void);
 
 /**
 * \brief Sets the current calendar time
@@ -69,7 +66,5 @@ void calendar_add_alarm(calendar_alarm_t *A);
 * \brief Add an alarm
 **/
 void calendar_remove_alarm(calendar_alarm_t *A);
-
-#endif // RTC_CALENDAR_ENABLE
 
 #endif
