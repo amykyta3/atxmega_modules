@@ -13,6 +13,8 @@
 
 // Select a UART Device
 #define UART_DEV        USARTD0
+#define UART_DEV_PORT   PORTD
+#define UART_TXPIN      PIN3_bm
 
 // Baud rate in Hz
 #define BAUD_RATE       9600L

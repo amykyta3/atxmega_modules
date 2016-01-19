@@ -24,6 +24,13 @@ asm(
 //------------------------------------------------------------------------------
 void sp_load_flash_buffer(uint16_t address, uint16_t data){
     asm(
+        // Save context
+        "push r0                            ;\n\t"
+        "push r1                            ;\n\t"
+        "push r20                           ;\n\t"
+        "push r30                           ;\n\t"
+        "push r31                           ;\n\t"
+        
         // Move data into R1:R0
         "movw r0, %1                        ;\n\t"
         
@@ -39,6 +46,13 @@ void sp_load_flash_buffer(uint16_t address, uint16_t data){
         "sts     CCP, r20                   ;\n\t"
         "spm                                ;\n\t"
         
+        // Restore Context
+        "pop r31                            ;\n\t"
+        "pop r30                            ;\n\t"
+        "pop r20                            ;\n\t"
+        "pop r1                             ;\n\t"
+        "pop r0                             ;\n\t"
+        
         : // No outputs
         : "r"(address), "r"(data)
         : "r0", "r1", "r20", "r30", "r31"
@@ -49,6 +63,12 @@ void sp_load_flash_buffer(uint16_t address, uint16_t data){
 //------------------------------------------------------------------------------
 void sp_erase_write_app_page(uint32_t address){
     asm(
+        // Save context
+        "push r19                           ;\n\t"
+        "push r20                           ;\n\t"
+        "push r30                           ;\n\t"
+        "push r31                           ;\n\t"
+        
         // Save RAMPZ
         "in  r19, RAMPZ                     ;\n\t"
         
@@ -68,6 +88,12 @@ void sp_erase_write_app_page(uint32_t address){
         // Restore RAMPZ
         "out     RAMPZ, r19                 ;\n\t"
         
+        // Restore Context
+        "pop r31                            ;\n\t"
+        "pop r30                            ;\n\t"
+        "pop r20                            ;\n\t"
+        "pop r19                            ;\n\t"
+        
         : // No outputs
         : "r"(address)
         : "r19", "r20", "r30", "r31"
@@ -79,6 +105,12 @@ void sp_erase_write_app_page(uint32_t address){
 //------------------------------------------------------------------------------
 void sp_erase_app_page(uint32_t address){
     asm(
+        // Save context
+        "push r19                           ;\n\t"
+        "push r20                           ;\n\t"
+        "push r30                           ;\n\t"
+        "push r31                           ;\n\t"
+        
         // Save RAMPZ
         "in  r19, RAMPZ                     ;\n\t"
         
@@ -98,6 +130,12 @@ void sp_erase_app_page(uint32_t address){
         // Restore RAMPZ
         "out     RAMPZ, r19                 ;\n\t"
         
+        // Restore Context
+        "pop r31                            ;\n\t"
+        "pop r30                            ;\n\t"
+        "pop r20                            ;\n\t"
+        "pop r19                            ;\n\t"
+        
         : // No outputs
         : "r"(address)
         : "r19", "r20", "r30", "r31"
@@ -109,6 +147,12 @@ void sp_erase_app_page(uint32_t address){
 //------------------------------------------------------------------------------
 void sp_erase_app(void){
     asm(
+        // Save context
+        "push r19                           ;\n\t"
+        "push r20                           ;\n\t"
+        "push r30                           ;\n\t"
+        "push r31                           ;\n\t"
+        
         // Save RAMPZ
         "in  r19, RAMPZ                     ;\n\t"
         
@@ -130,8 +174,14 @@ void sp_erase_app(void){
         // Restore RAMPZ
         "out     RAMPZ, r19                 ;\n\t"
         
+        // Restore Context
+        "pop r31                            ;\n\t"
+        "pop r30                            ;\n\t"
+        "pop r20                            ;\n\t"
+        "pop r19                            ;\n\t"
+        
         : // No outputs
-        : //"M"(CCP_SPM_gc), "M"(NVM_CMD_ERASE_APP_gc), "I"(&RAMPZ)
+        : // No inputs
         : "r19", "r20", "r30", "r31"
     );
     

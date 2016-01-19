@@ -81,6 +81,7 @@ void uart_putc(const char c);
 **/
 void uart_puts(const char *s);
 
+
 #ifdef __cplusplus
 }
 #endif

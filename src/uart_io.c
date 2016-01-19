@@ -216,13 +216,14 @@ void uart_init(void){
 
 //--------------------------------------------------------------------------------------------------
 void uart_uninit(void){
+    
     #ifdef TX_FLOW_CTL
         TX_FLOW_PORT.TXFC_INTMASK = 0x00;
         TX_FLOW_PORT.INTCTRL &= ~TXFC_INTLVL_gm;
     #endif
     
+    // Disable interrupts
     UART_DEV.CTRLA = 0;
-    UART_DEV.CTRLB = 0;
     
     #ifdef RXMODE_DMA
         EDMA.RX_DMA_CH.CTRLA = EDMA_CH_RESET_bm;
@@ -231,6 +232,17 @@ void uart_uninit(void){
     #ifdef TXMODE_DMA
         EDMA.TX_DMA_CH.CTRLA = EDMA_CH_RESET_bm;
     #endif
+    
+    // Disable UART
+    UART_DEV.CTRLB = 0;
+    UART_DEV.STATUS = USART_RXCIF_bm;
+    
+    // TX doesn't disable until it finishes transmitting.
+    // Once it does so, it sets the port pin to an input.
+    // Wait until it does so and set the pin back to a safe value
+    while(UART_DEV_PORT.DIR & UART_TXPIN);
+    UART_DEV_PORT.DIRSET = UART_TXPIN;
+    UART_DEV_PORT.OUTSET = UART_TXPIN;
 }
 
 //==================================================================================================
@@ -679,4 +691,3 @@ void uart_puts(const char *s){
         uart_write((uint8_t*)s, strlen(s));
     #endif
 }
-
