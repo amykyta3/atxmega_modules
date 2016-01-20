@@ -87,7 +87,6 @@ extern "C" {
 
 #include <stdint.h>
 #include <stddef.h>
-#include <result.h>
 #include <stdbool.h>
 
 #include "event_queue.h"
