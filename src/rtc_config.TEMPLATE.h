@@ -1,0 +1,13 @@
+
+#ifndef RTC_CONFIG_H
+#define RTC_CONFIG_H
+
+#define RTC_CLKSRC_gc       CLK_RTCSRC_TOSC_gc
+#define RTC_PRESCALER_gc    RTC_PRESCALER_DIV16_gc
+#define RTC_OVFINTLVL       RTC_OVFINTLVL_LO_gc
+#define RTC_COMPINTLVL      RTC_COMPINTLVL_MED_gc
+
+#define RTC_CALENDAR_ENABLE 1
+#define RTC_TIMER_ENABLE    1
+
+#endif
