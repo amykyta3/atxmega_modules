@@ -11,44 +11,47 @@
 
 //------------------------------------------------------------------------------
 
-#if(RTC_CLKSRC_gc == CLK_RTCSRC_ULP_gc)         // 1 kHz from internal 32kHz ULP
+#if(RTC_CLOCK_SOURCE == 0)         // 1 kHz from internal 32kHz ULP
+    #define RTC_CLKSRC_gc CLK_RTCSRC_ULP_gc
     #define RTC_CLK_FREQ 1000UL
-#elif(RTC_CLKSRC_gc == CLK_RTCSRC_TOSC_gc)      // 1.024 kHz from 32.768 kHz crystal oscillator on TOSC
+#elif(RTC_CLOCK_SOURCE == 1)      // 1.024 kHz from 32.768 kHz crystal oscillator on TOSC
+    #define RTC_CLKSRC_gc CLK_RTCSRC_TOSC_gc
     #define RTC_CLK_FREQ 1024UL
-#elif(RTC_CLKSRC_gc == CLK_RTCSRC_RCOSC_gc)     // 1.024 kHz from 32.768 kHz internal oscillator
+#elif(RTC_CLOCK_SOURCE == 2)     // 1.024 kHz from 32.768 kHz internal oscillator
+    #define RTC_CLKSRC_gc CLK_RTCSRC_RCOSC_gc
     #define RTC_CLK_FREQ 1024UL
-#elif(RTC_CLKSRC_gc == CLK_RTCSRC_TOSC32_gc)    // 32.768 kHz from 32.768 kHz crystal oscillator on TOSC
+#elif(RTC_CLOCK_SOURCE == 3)    // 32.768 kHz from 32.768 kHz crystal oscillator on TOSC
+    #define RTC_CLKSRC_gc CLK_RTCSRC_TOSC32_gc
     #define RTC_CLK_FREQ 32768UL
-#elif(RTC_CLKSRC_gc == CLK_RTCSRC_RCOSC32_gc)   // 32.768 kHz from 32.768 kHz internal oscillator
+#elif(RTC_CLOCK_SOURCE == 4)   // 32.768 kHz from 32.768 kHz internal oscillator
+    #define RTC_CLKSRC_gc CLK_RTCSRC_RCOSC32_gc
     #define RTC_CLK_FREQ 32768UL
-#elif(RTC_CLKSRC_gc == CLK_RTCSRC_EXTCLK_gc)    // External Clock from TOSC1
-    #error "CLK_RTCSRC_EXTCLK_gc is not supported"
 #else
-    #error "Invalid RTC_CLKSRC_gc"
+    #error "Invalid RTC_CLOCK_SOURCE"
 #endif
 
-#if(RTC_PRESCALER_gc == RTC_PRESCALER_DIV1_gc)
-    #define RTC_PRESCALER   1
-#elif(RTC_PRESCALER_gc == RTC_PRESCALER_DIV2_gc)
-    #define RTC_PRESCALER   2
-#elif(RTC_PRESCALER_gc == RTC_PRESCALER_DIV8_gc)
-    #define RTC_PRESCALER   8
-#elif(RTC_PRESCALER_gc == RTC_PRESCALER_DIV16_gc)
-    #define RTC_PRESCALER   16
-#elif(RTC_PRESCALER_gc == RTC_PRESCALER_DIV64_gc)
-    #define RTC_PRESCALER   64
-#elif(RTC_PRESCALER_gc == RTC_PRESCALER_DIV256_gc)
-    #define RTC_PRESCALER   256
-#elif(RTC_PRESCALER_gc == RTC_PRESCALER_DIV1024_gc)
-    #define RTC_PRESCALER   1024
+#if(RTC_PRESCALER == 1)
+    #define RTC_PRESCALER_gc RTC_PRESCALER_DIV1_gc
+#elif(RTC_PRESCALER == 2)
+    #define RTC_PRESCALER_gc RTC_PRESCALER_DIV2_gc
+#elif(RTC_PRESCALER == 8)
+    #define RTC_PRESCALER_gc RTC_PRESCALER_DIV8_gc
+#elif(RTC_PRESCALER == 16)
+    #define RTC_PRESCALER_gc RTC_PRESCALER_DIV16_gc
+#elif(RTC_PRESCALER == 64)
+    #define RTC_PRESCALER_gc RTC_PRESCALER_DIV64_gc
+#elif(RTC_PRESCALER == 256)
+    #define RTC_PRESCALER_gc RTC_PRESCALER_DIV256_gc
+#elif(RTC_PRESCALER == 1024)
+    #define RTC_PRESCALER_gc RTC_PRESCALER_DIV1024_gc
 #else
-    #error "Invalid RTC_PRESCALER_gc"
+    #error "Invalid RTC_PRESCALER"
 #endif
 
 #define RTC_CNT_FREQ    (RTC_CLK_FREQ/RTC_PRESCALER)
 
 // 1-minute period
-#define RTC_PER_VALUE   (RTC_CLK_FREQ*60/RTC_PRESCALER)
+#define RTC_PER_VALUE   (RTC_CLK_FREQ*60UL/RTC_PRESCALER)
 
 #if(RTC_CALENDAR_ENABLE)
 //==============================================================================
@@ -580,6 +583,8 @@ void timer_stop(timer_t *timerid){
 void rtc_init(void){
     RTC.CTRL = RTC_PRESCALER_OFF_gc;
     CLK.RTCCTRL = RTC_CLKSRC_gc | CLK_RTCEN_bm;
+    
+    while(RTC.STATUS & RTC_SYNCBUSY_bm);
     
     // Set period to 1 minute
     RTC.PER = RTC_PER_VALUE;
