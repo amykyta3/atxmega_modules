@@ -215,7 +215,7 @@ void cli_process_char(char inchar){
     }else if((inchar == 0x7F) || (inchar == '\b')){ // Backspace Key
         if(stridx != 0){
             stridx--;
-            cli_puts("\b \b");
+            if(echo) cli_puts("\b \b");
         }
     }else if(inchar == '\n'){
         // discard line feed characters.
