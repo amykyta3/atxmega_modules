@@ -274,6 +274,7 @@ static void check_alarms(void){
 
 //------------------------------------------------------------------------------
 ISR(RTC_OVF_vect){
+    
     // Increment Time
     if(Cal_minute == 59){
         Cal_minute = 0;
@@ -311,7 +312,16 @@ ISR(RTC_OVF_vect){
 //==============================================================================
 #if(RTC_TIMER_ENABLE)
 
+/**
+ * Head of linked list of all active timers
+ **/
 static timer_t *Timer_first;
+
+/**
+ * Tick reference.
+ * This is the CNT value that the first timer's ticks_remaining value is in
+ * reference to.
+ **/
 static uint16_t Timer_tickref;
 
 //==============================================================================
@@ -332,6 +342,10 @@ static uint16_t Timer_tickref;
 * \param is_isr Set to 1 if calling from COMP ISR.
 **/
 static void update_tickref(uint16_t new_cnt, uint8_t is_isr){
+    
+    // In the super rare (impossible?) chance that cnt is caught
+    // before it gets reset, set to 0
+    if(new_cnt == RTC_PER_VALUE) new_cnt = 0;
     
     if(Timer_first){
         uint16_t ticks_elapsed;
@@ -372,6 +386,8 @@ static void insert_timer(timer_t *t){
     timer_t *t_prev = NULL;
     timer_t *t_current = Timer_first;
     
+    t->next = NULL;
+    
     while(1){
         if(t_current == NULL){
             // Got to end of list. Append
@@ -387,7 +403,11 @@ static void insert_timer(timer_t *t){
         // See if t should go before or after t_current
         if(t->ticks_remaining < t_current->ticks_remaining){
             // Insert before
-            t_prev->next = t;
+            if(t_prev){
+                t_prev->next = t;
+            }else{
+                Timer_first = t;
+            }
             t->next = t_current;
             
             // update
@@ -418,13 +438,24 @@ static void update_COMP(){
             if(new_comp >= RTC_PER_VALUE){
                 new_comp -= RTC_PER_VALUE;
             }
+            
+            // Set comp to 1 before since interupt fires at COMP+1
+            if(new_comp == 0){
+                new_comp = RTC_PER_VALUE-1;
+            }else{
+                new_comp -= 1;
+            }
             RTC.COMP = new_comp;
+
         }else{
             // Leave COMP as-is
         }
         
-        // Enable COMP Interrupt
-        RTC.INTCTRL |= RTC_COMPINTLVL;
+        // If disabled, clear flag and enable COMP interrupt
+        if((RTC.INTCTRL & RTC_COMPINTLVL_gm) == 0){
+            RTC.INTFLAGS = RTC_COMPIF_bm;
+            RTC.INTCTRL |= RTC_COMPINTLVL;
+        }
     }else{
         // Disable COMP Interrupt
         RTC.INTCTRL &= ~(RTC_COMPINTLVL_gm);
@@ -435,7 +466,6 @@ static void update_COMP(){
 ISR(RTC_COMP_vect){
     uint16_t current_CNT;
     timer_t *t = NULL;
-    
     // Get CNT value
     current_CNT = RTC.CNT;
     
@@ -458,7 +488,6 @@ ISR(RTC_COMP_vect){
                     insert_timer(t);
                 }
                 
-                update_COMP();
             }
         }
     }
@@ -470,9 +499,9 @@ ISR(RTC_COMP_vect){
         }
     }
     
-    
     // Check for any more expired timers. Repeat until all are cleared
     while(t){
+        t = NULL;
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
             if(Timer_first){
                 if(Timer_first->ticks_remaining == 0){
@@ -487,8 +516,6 @@ ISR(RTC_COMP_vect){
                         t->ticks_remaining = t->ticks_reload;
                         insert_timer(t);
                     }
-                    
-                    update_COMP();
                 }
             }
         }
@@ -501,6 +528,7 @@ ISR(RTC_COMP_vect){
         }
     }
     
+    update_COMP();
 }
 
 //------------------------------------------------------------------------------
@@ -517,8 +545,6 @@ void timer_start(timer_t *timerid, struct timerctl *settings){
             timerid->ticks_reload = 0;
         }
     }
-    
-    timerid->next = NULL;
     
     // Get CNT value
     while(RTC.STATUS & RTC_SYNCBUSY_bm);
@@ -572,7 +598,6 @@ void timer_stop(timer_t *timerid){
     }
     
     // Update timerid
-    timerid->next = NULL;
     timerid->ticks_remaining += ticks_sum;
 }
 #endif // RTC_TIMER_ENABLE
