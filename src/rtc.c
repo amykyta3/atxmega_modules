@@ -110,7 +110,7 @@ void calendar_set_time(calendar_time_t *T){
     Cal_minute = T->minute;
     
     // Restart RTC
-    RTC.INTCTRL = intctrl;
+    RTC.INTCTRL = intctrl | RTC_OVFINTLVL;
     RTC.CTRL = RTC_PRESCALER_gc;
 }
 
@@ -128,17 +128,29 @@ void calendar_set_DST(uint8_t observed, uint8_t enabled){
 
 //------------------------------------------------------------------------------
 void calendar_get_time(calendar_time_t *T){
-    // Wait for sync if needed
-    while(RTC.STATUS & RTC_SYNCBUSY_bm);
     
-    // Copy state
-    T->second = RTC.CNT / RTC_CNT_FREQ;
-    T->year = Cal_year;
-    T->month = Cal_month;
-    T->day = Cal_day;
-    T->dayofweek = Cal_dayofweek;
-    T->hour = Cal_hour;
-    T->minute = Cal_minute;
+    if((RTC.INTCTRL & RTC_OVFINTLVL_gm) == 0){
+        // Interrupt is not enabled, therefore time was never set since powerup
+        T->second = 0;
+        T->year = 0;
+        T->month = 0;
+        T->day = 0;
+        T->dayofweek = 0;
+        T->hour = 0;
+        T->minute = 0;
+    }else{
+        // Wait for sync if needed
+        while(RTC.STATUS & RTC_SYNCBUSY_bm);
+        
+        // Copy state
+        T->second = RTC.CNT / RTC_CNT_FREQ;
+        T->year = Cal_year;
+        T->month = Cal_month;
+        T->day = Cal_day;
+        T->dayofweek = Cal_dayofweek;
+        T->hour = Cal_hour;
+        T->minute = Cal_minute;
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -616,20 +628,12 @@ void rtc_init(void){
     RTC.CNT = 0x0000;
     
     RTC.INTFLAGS = RTC_COMPIF_bm | RTC_OVFIF_bm;
-    RTC.INTCTRL = RTC_COMPINTLVL_OFF_gc | RTC_OVFINTLVL;
+    RTC.INTCTRL = RTC_COMPINTLVL_OFF_gc | RTC_OVFINTLVL_OFF_gc;
     
     #if(RTC_CALENDAR_ENABLE)
         Alarm_first = NULL;
         
-        // Set to a valid date
-        Cal_year = 2000;
-        Cal_month = 1;
-        Cal_day = 1;
-        Cal_dayofweek = 0;
-        Cal_hour = 0;
-        Cal_minute = 0;
-        DST_observed = 0;
-        DST_on = 0;
+        // No need to initialize calendar variables. They are not used until actually set.
     #endif
     
     #if(RTC_TIMER_ENABLE)

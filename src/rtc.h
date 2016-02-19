@@ -53,6 +53,9 @@ typedef struct calendar_alarm_s{
 /**
 * \brief Sets the current calendar time
 * \param [in] T Pointer to #time_t object
+* 
+* \warning Any timers that are active while a new time is set will get disrupted.
+* Behavior is undefined.
 **/
 void calendar_set_time(calendar_time_t *T);
 
@@ -66,6 +69,8 @@ void calendar_set_DST(uint8_t observed, uint8_t enabled);
 /**
 * \brief Gets the current calendar time
 * \param [out] T Current time
+* 
+* If time hasn't been set yet with calendar_set_time(), all values will read as 0.
 **/
 void calendar_get_time(calendar_time_t *T);
 
