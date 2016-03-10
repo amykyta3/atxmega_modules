@@ -224,11 +224,16 @@ static uint8_t days_in_current_month(){
 static bool inc_day(void){
     if(Cal_dayofweek == 6){
         Cal_dayofweek = 0;
+    } else {
+        Cal_dayofweek++;
     }
     
     if(Cal_day == days_in_current_month(Cal_month, Cal_year)){
         // signal to increment month
+        Cal_day = 1;
         return(true);
+    } else {
+        Cal_day++;
     }
     
     return(false);
