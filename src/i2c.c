@@ -171,15 +171,15 @@ void i2c_transfer_start(const i2c_package_t *pkg, void (*callback)(i2c_status_t 
     if(pkg->addr_len > 0){
         // Need to write register address first.
         transfer.sending_addr = true;
-        I2C_DEV.MASTER.ADDR = pkg->slave_addr;
+        I2C_DEV.MASTER.ADDR = (pkg->slave_addr << 1);
     } else {
         // No address stage. Data transfer only
         transfer.sending_addr = false;
         
         if(pkg->read){
-            I2C_DEV.MASTER.ADDR = pkg->slave_addr | 0x01;
+            I2C_DEV.MASTER.ADDR = (pkg->slave_addr << 1) | 0x01;
         }else{
-            I2C_DEV.MASTER.ADDR = pkg->slave_addr;
+            I2C_DEV.MASTER.ADDR = (pkg->slave_addr << 1);
         }
     }
 }
