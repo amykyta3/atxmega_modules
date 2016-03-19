@@ -31,6 +31,7 @@
 *=================================================================================================*/
 
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 
 #include <avr/io.h>
@@ -38,7 +39,7 @@
 #include <util/atomic.h>
 
 #include "i2c.h"
-#include <i2c_internal.h>
+#include <i2c_config.h>
 
 //--------------------------------------------------------------------------------------------------
 
@@ -58,7 +59,7 @@ ISR(I2C_IRQ_vect) {
     I2C_DEV.MASTER.STATUS |= TWI_MASTER_RIF_bm | TWI_MASTER_WIF_bm | TWI_MASTER_CLKHOLD_bm
                             | TWI_MASTER_ARBLOST_bm | TWI_MASTER_BUSERR_bm;
     
-    if(transfer.pkg = NULL) return;
+    if(transfer.pkg == NULL) return;
     
     if(status & (TWI_MASTER_ARBLOST_bm | TWI_MASTER_BUSERR_bm | TWI_MASTER_RXACK_bm)){
         // Error occurred
@@ -81,10 +82,10 @@ ISR(I2C_IRQ_vect) {
                 // Done sending address
                 transfer.sending_addr = false;
                 transfer.idx = 0;
-                
                 if(transfer.pkg->read){
                     // Re-start condition to do a read
                     I2C_DEV.MASTER.ADDR |= 0x01;
+                    return;
                 }
             }
         }
@@ -108,7 +109,7 @@ ISR(I2C_IRQ_vect) {
     } else if(status & TWI_MASTER_RIF_bm) { //--------------------------
         // Read interrupt. Finished receiving a byte
         if(transfer.idx < transfer.pkg->data_len){
-            transfer.pkg->data[transfer.idx];
+            transfer.pkg->data[transfer.idx] = I2C_DEV.MASTER.DATA;
             transfer.idx++;
         }else{
             // Nowhere to put rd data. Stop
