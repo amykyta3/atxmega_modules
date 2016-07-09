@@ -69,6 +69,11 @@ static uint8_t DST_on;
 
 static calendar_alarm_t *Alarm_first;
 
+// Clock correction variables
+static calendar_time_t prev_set_time;
+static int32_t correction_interval;
+static int32_t correction_interval_counter;
+
 //==============================================================================
 // Calendar Functions
 //==============================================================================
@@ -112,6 +117,9 @@ void calendar_set_time(calendar_time_t *T){
     // Restart RTC
     RTC.INTCTRL = intctrl | RTC_OVFINTLVL;
     RTC.CTRL = RTC_PRESCALER_gc;
+    
+    // Update reference time
+    prev_set_time = *T;
 }
 
 //------------------------------------------------------------------------------
@@ -151,6 +159,22 @@ void calendar_get_time(calendar_time_t *T){
         T->hour = Cal_hour;
         T->minute = Cal_minute;
     }
+}
+
+//------------------------------------------------------------------------------
+void calendar_get_last_set_timestamp(calendar_time_t *T){
+    *T = prev_set_time;
+}
+
+//------------------------------------------------------------------------------
+void calendar_set_correction_interval(int32_t interval){
+    correction_interval = interval;
+    correction_interval_counter = 0;
+}
+
+//------------------------------------------------------------------------------
+int32_t calendar_get_correction_interval(void){
+    return(correction_interval);
 }
 
 //------------------------------------------------------------------------------
@@ -290,8 +314,7 @@ static void check_alarms(void){
 }
 
 //------------------------------------------------------------------------------
-ISR(RTC_OVF_vect){
-    
+static void minute_tick_isr(void){
     // Increment Time
     if(Cal_minute == 59){
         Cal_minute = 0;
@@ -320,6 +343,34 @@ ISR(RTC_OVF_vect){
     }
     
     check_alarms();
+}
+
+ISR(RTC_OVF_vect){
+    
+    // Increment clock correction counter
+    if(correction_interval > 0){
+        // Correcting for slow clock
+        correction_interval_counter++;
+        if(correction_interval == correction_interval_counter){
+            correction_interval_counter = 0;
+            
+            // Clock is slow. Insert an extra minute to catch up
+            minute_tick_isr();
+        }
+        minute_tick_isr();
+    } else if(correction_interval < 0){
+        // Correcting for fast clock
+        correction_interval_counter--;
+        if(correction_interval == correction_interval_counter){
+            correction_interval_counter = 0;
+            // Clock is fast. Remove a minute by not doing the ISR
+        }else{
+            minute_tick_isr();
+        }
+    } else {
+        // No correction enabled.
+        minute_tick_isr();
+    }
 }
 
 #endif // RTC_CALENDAR_ENABLE
@@ -637,6 +688,8 @@ void rtc_init(void){
     
     #if(RTC_CALENDAR_ENABLE)
         Alarm_first = NULL;
+        correction_interval = 0;
+        correction_interval_counter = 0;
         
         // No need to initialize calendar variables. They are not used until actually set.
     #endif

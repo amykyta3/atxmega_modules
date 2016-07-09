@@ -75,6 +75,28 @@ void calendar_set_DST(uint8_t observed, uint8_t enabled);
 void calendar_get_time(calendar_time_t *T);
 
 /**
+* \brief Gets the timestamp of when calendar_set_time() was set last.
+* \param [out] T Reference timestamp
+* 
+* If time hasn't been set yet with calendar_set_time(), all values will read as 0.
+**/
+void calendar_get_last_set_timestamp(calendar_time_t *T);
+
+/**
+* \brief Set the correction interval to compensate for clock drift
+* \param interval Number of minutes between correction events.
+*       interval > 0: Correct for slow clock
+*       interval < 0: Correct for fast clock
+*       interval == 0: Disable correction
+**/
+void calendar_set_correction_interval(int32_t interval);
+
+/**
+* \brief Returns the current correction interval
+**/
+int32_t calendar_get_correction_interval(void);
+
+/**
 * \brief Add an alarm
 **/
 void calendar_add_alarm(calendar_alarm_t *A);
