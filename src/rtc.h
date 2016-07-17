@@ -92,9 +92,9 @@ void calendar_get_last_set_timestamp(calendar_time_t *T);
 void calendar_set_correction_interval(int32_t interval);
 
 /**
-* \brief Returns the current correction interval
+* \brief Returns the number of minutes corrected to-date
 **/
-int32_t calendar_get_correction_interval(void);
+int32_t calendar_get_total_correction(void);
 
 /**
 * \brief Add an alarm

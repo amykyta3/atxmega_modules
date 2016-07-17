@@ -73,6 +73,7 @@ static calendar_alarm_t *Alarm_first;
 static calendar_time_t prev_set_time;
 static int32_t correction_interval;
 static int32_t correction_interval_counter;
+static int32_t total_correction_minutes;
 
 //==============================================================================
 // Calendar Functions
@@ -120,6 +121,9 @@ void calendar_set_time(calendar_time_t *T){
     
     // Update reference time
     prev_set_time = *T;
+    
+    correction_interval_counter = 0;
+    total_correction_minutes = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -170,11 +174,12 @@ void calendar_get_last_set_timestamp(calendar_time_t *T){
 void calendar_set_correction_interval(int32_t interval){
     correction_interval = interval;
     correction_interval_counter = 0;
+    total_correction_minutes = 0;
 }
 
 //------------------------------------------------------------------------------
-int32_t calendar_get_correction_interval(void){
-    return(correction_interval);
+int32_t calendar_get_total_correction(void){
+    return(total_correction_minutes);
 }
 
 //------------------------------------------------------------------------------
@@ -353,6 +358,7 @@ ISR(RTC_OVF_vect){
         correction_interval_counter++;
         if(correction_interval == correction_interval_counter){
             correction_interval_counter = 0;
+            total_correction_minutes++;
             
             // Clock is slow. Insert an extra minute to catch up
             minute_tick_isr();
@@ -363,6 +369,8 @@ ISR(RTC_OVF_vect){
         correction_interval_counter--;
         if(correction_interval == correction_interval_counter){
             correction_interval_counter = 0;
+            total_correction_minutes--;
+            
             // Clock is fast. Remove a minute by not doing the ISR
         }else{
             minute_tick_isr();
@@ -549,7 +557,6 @@ ISR(RTC_COMP_vect){
                 t = Timer_first;
                 Timer_first = Timer_first->next;
                 
-                
                 // if repeat, reload ticks_remaining and insert_timer()
                 if(t->ticks_reload){
                     t->ticks_remaining = t->ticks_reload;
@@ -690,6 +697,7 @@ void rtc_init(void){
         Alarm_first = NULL;
         correction_interval = 0;
         correction_interval_counter = 0;
+        total_correction_minutes = 0;
         
         // No need to initialize calendar variables. They are not used until actually set.
     #endif
